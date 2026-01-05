@@ -15,18 +15,16 @@ const int SERVO_AUF = 0;
 
 // Zeiten in Sekunden
 const uint32_t OPEN_TIME  = 10;
-const uint32_t CLOSE_TIME = 7 * 24 * 60 * 60;
+const uint32_t CLOSE_TIME = 7UL * 24UL * 60UL * 60UL;
 
 // Zustände
 enum State {
-  OPENING,
   WAIT_OPEN,
-  CLOSING,
   WAIT_CLOSED
 };
 
 State currentState;
-uint32_t stateStartTime;
+uint32_t nextActionTime = 0;
 
 bool loopActive = false;
 bool lastButtonState = HIGH;
@@ -66,7 +64,7 @@ void loop() {
 
       ventil.write(SERVO_AUF);
       currentState = WAIT_OPEN;
-      stateStartTime = nowUnix;
+      nextActionTime = nowUnix + OPEN_TIME;
     }
   }
   lastButtonState = buttonState;
@@ -77,20 +75,20 @@ void loop() {
   switch (currentState) {
 
     case WAIT_OPEN:
-      if (nowUnix - stateStartTime >= OPEN_TIME) {
+      if (nowUnix >= nextActionTime) {
         Serial.println("10s offen → schließe");
         ventil.write(SERVO_ZU);
         currentState = WAIT_CLOSED;
-        stateStartTime = nowUnix;
+        nextActionTime = nowUnix + CLOSE_TIME;
       }
       break;
 
     case WAIT_CLOSED:
-      if (nowUnix - stateStartTime >= CLOSE_TIME) {
-        Serial.println("7Tage zu → öffne erneut");
+      if (nowUnix >= nextActionTime) {
+        Serial.println("7 Tage zu → öffne erneut");
         ventil.write(SERVO_AUF);
         currentState = WAIT_OPEN;
-        stateStartTime = nowUnix;
+        nextActionTime = nowUnix + OPEN_TIME;
       }
       break;
   }
